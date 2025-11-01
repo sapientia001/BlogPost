@@ -77,6 +77,17 @@ app.get('/', (req, res) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Microbiology Blog API is running 🚀',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    version: '1.0.0'
+  });
+});
+
+
 // API routes
 
 app.use('/api/auth', authRoutes);
