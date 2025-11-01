@@ -8,7 +8,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const xss = require('xss-clean');
 
-// Import routes
+// Import routes - FIXED PATH
 const {
   authRoutes,
   userRoutes,
@@ -19,13 +19,13 @@ const {
   notificationRoutes,
   analyticsRoutes,
   uploadRoutes
-} = require('./routes');
+} = require('./src/routes'); // Changed from './routes' to './src/routes'
 
 // Import middleware
-const { errorHandler } = require('./middleware/errorHandler');
-const { notFound } = require('./middleware/notFound');
-const { authenticate } = require('./middleware/auth');
-const logger = require('./utils/logger');
+const { errorHandler } = require('./src/middleware/errorHandler');
+const { notFound } = require('./src/middleware/notFound');
+const { authenticate } = require('./src/middleware/auth');
+const logger = require('./src/utils/logger');
 
 // Create Express app
 const app = express();
@@ -36,9 +36,9 @@ app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp());
 
-// CORS configuration
+// CORS configuration - UPDATED PORT
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'http://localhost:5173', // Changed to 5173
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
