@@ -54,13 +54,26 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Health check route (exclude from some rate limiting if needed)
-app.get('/api/health', (req, res) => {
+// Add this after your middleware and before your other routes
+
+// Root endpoint - for health checks and general API info
+app.get('/', (req, res) => {
   res.status(200).json({
-    success: true,
-    message: 'Microbiology Blog API is running 🚀',
+    service: 'Microbiology Blog API',
+    version: '1.0.0',
+    status: 'running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    version: '1.0.0'
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    endpoints: {
+      health: '/api/health',
+      documentation: '/api/docs',
+      authentication: '/api/auth',
+      posts: '/api/posts',
+      categories: '/api/categories',
+      users: '/api/users'
+    },
+    message: 'Welcome to Microbiology Blog API Server'
   });
 });
 
