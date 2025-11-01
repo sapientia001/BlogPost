@@ -1,115 +1,151 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const compression = require('compression');
-const morgan = require('morgan');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp = require('hpp');
-const xss = require('xss-clean');
-
-// Import routes - FIXED PATH
-const {
-  authRoutes,
-  userRoutes,
-  postRoutes,
-  categoryRoutes,
-  commentRoutes,
-  bookmarkRoutes,
-  notificationRoutes,
-  analyticsRoutes,
-  uploadRoutes
-} = require('./src/routes'); // Changed from './routes' to './src/routes'
-
-// Import middleware
-const { errorHandler } = require('./src/middleware/errorHandler');
-const { notFound } = require('./src/middleware/notFound');
-const { authenticate } = require('./src/middleware/auth');
+const app = require('./src/app');
+const connectDB = require('./src/config/database');
 const logger = require('./src/utils/logger');
+const { cache } = require('./src/middleware/cache');
 
-// Create Express app
-const app = express();
-
-// Security middleware
-app.use(helmet());
-app.use(mongoSanitize());
-app.use(xss());
-app.use(hpp());
-
-// CORS configuration - UPDATED PORT
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173', // Changed to 5173
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
-
-// Compression
-app.use(compression());
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Logging
-app.use(morgan('combined', {
-  stream: { write: (message) => logger.info(message.trim()) }
-}));
-
-// Static files
-app.use('/uploads', express.static('uploads'));
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    service: 'Microbiology Blog API',
-    version: '1.0.0',
-    status: 'running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime(),
-    message: 'Welcome to Microbiology Blog API Server'
+// Handle uncaught exceptions (synchronous errors)
+process.on('uncaughtException', (error) => {
+  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack
   });
+  process.exit(1);
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    service: 'microbiology-blog-api',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+// Initialize database connection
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    logger.info('✅ Database connection established');
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/comments', commentRoutes);
-app.use('/api/bookmarks', bookmarkRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/uploads', uploadRoutes);
+    // Get port from environment or default
+    const PORT = process.env.PORT || 5000;
+    
+    // Start server
+    const server = app.listen(PORT, () => {
+      logger.info(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode`);
+      logger.info(`📍 Port: ${PORT}`);
+      logger.info(`🌐 URL: http://localhost:${PORT}`);
+      logger.info(`📊 API Health: http://localhost:${PORT}/api/health`);
+      logger.info(`📚 API Docs: http://localhost:${PORT}/api/docs`);
+      
+      //Log environment-specific information
+      if (process.env.NODE_ENV === 'development') {
+        logger.info('🔧 Development mode - Enhanced logging enabled');
+      }
+      
+      if (process.env.NODE_ENV === 'production') {
+        logger.info('🏭 Production mode - Optimized for performance');
+      }
+    });
 
-// 404 handler
-app.use(notFound);
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (error) => {
+      logger.error('UNHANDLED REJECTION! 💥 Shutting down...', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      // Gracefully close server
+      server.close(() => {
+        process.exit(1);
+      });
+    });
 
-// Global error handler
-app.use(errorHandler);
+    // Graceful shutdown handler
+    const gracefulShutdown = (signal) => {
+      logger.info(`📞 ${signal} received. Starting graceful shutdown...`);
+      
+      // Stop accepting new requests
+      server.close(async (err) => {
+        if (err) {
+          logger.error('Error during server close', { error: err.message });
+          process.exit(1);
+        }
+        
+        logger.info('✅ HTTP server closed');
+        
+        // Close database connection
+        try {
+          const mongoose = require('mongoose');
+          await mongoose.connection.close();
+          logger.info('✅ Database connection closed');
+        } catch (dbError) {
+          logger.error('Error closing database connection', { error: dbError.message });
+        }
+        
+        // Clear cache
+        try {
+          cache.flushAll();
+          logger.info('✅ Cache cleared');
+        } catch (cacheError) {
+          logger.error('Error clearing cache', { error: cacheError.message });
+        }
+        
+        logger.info('👋 Graceful shutdown completed');
+        process.exit(0);
+      });
+      
+      // Force close after 30 seconds
+      setTimeout(() => {
+        logger.error('🕒 Forcing shutdown after timeout');
+        process.exit(1);
+      }, 30000);
+    };
 
-module.exports = app;
+    // Listen for termination signals
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    //Handle process warnings
+    process.on('warning', (warning) => {
+      logger.warn('Process Warning', {
+        name: warning.name,
+        message: warning.message,
+        stack: warning.stack
+      });
+    });
+
+    // Monitor server health
+    const monitorServerHealth = () => {
+      const memoryUsage = process.memoryUsage();
+      const uptime = process.uptime();
+      
+      logger.debug('Server Health Check', {
+        uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
+        memory: {
+          rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`,
+          heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
+          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
+          external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`
+        },
+        cache: {
+          keys: cache.keys().length,
+          hits: cache.getStats().hits,
+          misses: cache.getStats().misses
+        }
+      });
+    };
+
+    // Health check every 5 minutes in production
+    if (process.env.NODE_ENV === 'production') {
+      setInterval(monitorServerHealth, 5 * 60 * 1000);
+    }
+
+  } catch (error) {
+    logger.error('❌ Failed to start server', {
+      error: error.message,
+      stack: error.stack
+    });
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
+
+// Export for testing purposes
+// module.exports = app;

@@ -1,4 +1,3 @@
-// routes/index.js
 // Barrel export for all routes
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
@@ -19,5 +18,5 @@ module.exports = {
   bookmarkRoutes,
   notificationRoutes,
   analyticsRoutes,
-  uploadRoutes,
+  uploadRoutes
 };
