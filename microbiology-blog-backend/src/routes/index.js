@@ -1,3 +1,4 @@
+// routes/index.js
 // Barrel export for all routes
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
