@@ -1,7 +1,14 @@
 const app = require('./src/app');
 const connectDB = require('./src/config/database');
 const logger = require('./src/utils/logger');
-const { cache } = require('./src/middleware/cache');
+
+// Safely import cache to prevent errors if module doesn't exist
+let cache;
+try {
+  cache = require('./src/middleware/cache');
+} catch (error) {
+  logger.warn('⚠️ Cache middleware not found, proceeding without cache');
+}
 
 // Handle uncaught exceptions (synchronous errors)
 process.on('uncaughtException', (error) => {
