@@ -13,9 +13,18 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Initialize database connection
+// Initialize database connection and start server
 const startServer = async () => {
   try {
+    // Validate essential environment variables
+    const requiredEnvVars = ['MONGODB_URI'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+    if (missingVars.length > 0) {
+      logger.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+      process.exit(1);
+    }
+
     // Connect to MongoDB
     await connectDB();
     logger.info('✅ Database connection established');
@@ -31,7 +40,7 @@ const startServer = async () => {
       logger.info(`📊 API Health: http://localhost:${PORT}/api/health`);
       logger.info(`📚 API Docs: http://localhost:${PORT}/api/docs`);
       
-      //Log environment-specific information
+      // Log environment-specific information
       if (process.env.NODE_ENV === 'development') {
         logger.info('🔧 Development mode - Enhanced logging enabled');
       }
@@ -39,6 +48,19 @@ const startServer = async () => {
       if (process.env.NODE_ENV === 'production') {
         logger.info('🏭 Production mode - Optimized for performance');
       }
+    });
+
+    // Handle server-specific errors
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`❌ Port ${PORT} is already in use`);
+      } else {
+        logger.error('❌ Server error:', {
+          code: error.code,
+          message: error.message
+        });
+      }
+      process.exit(1);
     });
 
     // Handle unhandled promise rejections
@@ -62,7 +84,7 @@ const startServer = async () => {
       // Stop accepting new requests
       server.close(async (err) => {
         if (err) {
-          logger.error('Error during server close', { error: err.message });
+          logger.error('❌ Error during server close', { error: err.message });
           process.exit(1);
         }
         
@@ -74,15 +96,17 @@ const startServer = async () => {
           await mongoose.connection.close();
           logger.info('✅ Database connection closed');
         } catch (dbError) {
-          logger.error('Error closing database connection', { error: dbError.message });
+          logger.error('❌ Error closing database connection', { error: dbError.message });
         }
         
-        // Clear cache
+        // Clear cache (if cache methods exist)
         try {
-          cache.flushAll();
-          logger.info('✅ Cache cleared');
+          if (cache && typeof cache.flushAll === 'function') {
+            cache.flushAll();
+            logger.info('✅ Cache cleared');
+          }
         } catch (cacheError) {
-          logger.error('Error clearing cache', { error: cacheError.message });
+          logger.error('❌ Error clearing cache', { error: cacheError.message });
         }
         
         logger.info('👋 Graceful shutdown completed');
@@ -100,9 +124,9 @@ const startServer = async () => {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-    //Handle process warnings
+    // Handle process warnings
     process.on('warning', (warning) => {
-      logger.warn('Process Warning', {
+      logger.warn('⚠️ Process Warning', {
         name: warning.name,
         message: warning.message,
         stack: warning.stack
@@ -114,26 +138,51 @@ const startServer = async () => {
       const memoryUsage = process.memoryUsage();
       const uptime = process.uptime();
       
-      logger.debug('Server Health Check', {
+      // Format memory usage for better readability
+      const formatMemoryUsage = (bytes) => `${Math.round(bytes / 1024 / 1024 * 100) / 100} MB`;
+      
+      const healthInfo = {
         uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
         memory: {
-          rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`,
-          heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
-          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
-          external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`
-        },
-        cache: {
-          keys: cache.keys().length,
-          hits: cache.getStats().hits,
-          misses: cache.getStats().misses
+          rss: formatMemoryUsage(memoryUsage.rss),
+          heapTotal: formatMemoryUsage(memoryUsage.heapTotal),
+          heapUsed: formatMemoryUsage(memoryUsage.heapUsed),
+          external: formatMemoryUsage(memoryUsage.external)
         }
-      });
+      };
+      
+      // Add cache stats only if cache methods exist
+      if (cache) {
+        try {
+          if (typeof cache.keys === 'function') {
+            healthInfo.cache = {
+              keys: cache.keys().length
+            };
+          }
+          if (typeof cache.getStats === 'function') {
+            const stats = cache.getStats();
+            healthInfo.cache = {
+              ...healthInfo.cache,
+              hits: stats.hits,
+              misses: stats.misses
+            };
+          }
+        } catch (error) {
+          healthInfo.cacheError = 'Unable to get cache stats';
+        }
+      }
+      
+      logger.debug('Server Health Check', healthInfo);
     };
 
     // Health check every 5 minutes in production
     if (process.env.NODE_ENV === 'production') {
       setInterval(monitorServerHealth, 5 * 60 * 1000);
+      logger.info('📊 Server health monitoring enabled');
     }
+
+    // Initial health check
+    monitorServerHealth();
 
   } catch (error) {
     logger.error('❌ Failed to start server', {
