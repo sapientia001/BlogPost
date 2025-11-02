@@ -31,8 +31,6 @@ router.get('/edit/:postId', auth, validateObjectId('postId'), async (req, res) =
   try {
     const { postId } = req.params;
     
-    console.log('🔧 EDIT ROUTE - Fetching post for editing:', postId, 'User:', req.user.id);
-    
     const post = await Post.findById(postId)
       .populate('author', 'firstName lastName avatar institution bio')
       .populate('category', 'name slug');
@@ -54,15 +52,6 @@ router.get('/edit/:postId', auth, validateObjectId('postId'), async (req, res) =
         message: 'Not authorized to edit this post'
       });
     }
-
-    console.log('✅ EDIT ROUTE - Post loaded for editing:', {
-      id: post._id,
-      title: post.title,
-      status: post.status,
-      author: post.author.firstName,
-      isOwner,
-      isAdmin
-    });
 
     // Transform the post data
     const transformedPost = {

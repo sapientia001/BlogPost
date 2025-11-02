@@ -203,7 +203,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(user, resetToken) {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
     const subject = 'Reset Your Password - Microbiology Blog';
     const html = this.getPasswordResetTemplate(user, resetUrl, resetToken);
     const text = `Hello ${user.firstName}, use this link to reset your password: ${resetUrl}`;
@@ -212,7 +212,7 @@ class EmailService {
   }
 
   async sendEmailVerificationEmail(user, verificationToken) {
-    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
     const subject = 'Verify Your Email - Microbiology Blog';
     const html = this.getEmailVerificationTemplate(user, verifyUrl);
     const text = `Hello ${user.firstName}, verify your email by clicking: ${verifyUrl}`;
@@ -306,7 +306,7 @@ class EmailService {
       </div>
 
       <div style="text-align: center;">
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" class="cta-button">
+        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard" class="cta-button">
           Explore Your Dashboard
         </a>
       </div>
