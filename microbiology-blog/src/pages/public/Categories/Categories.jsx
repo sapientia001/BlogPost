@@ -20,18 +20,23 @@ const Categories = () => {
   const { 
     data: categoriesResponse, 
     isLoading, 
-    error 
+    error,
+    isFetching 
   } = useGetQuery(
     ['categories'],
     categoriesAPI.getCategories,
     {
       retry: 3,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: true, // Ensure fresh data on component mount
     }
   );
 
-  // Extract categories from API response - FIXED: Proper data structure
-  const categories = categoriesResponse?.data?.categories || [];
+  // FIXED: Properly extract categories from API response
+  const apiCategories = categoriesResponse?.data?.categories || [];
+  
+  // Check if we have valid API data (not just empty array from initial state)
+  const hasApiCategories = categoriesResponse && Array.isArray(apiCategories) && apiCategories.length > 0;
 
   // Default categories with proper structure matching API
   const defaultCategories = [
@@ -109,8 +114,16 @@ const Categories = () => {
     }
   ];
 
-  // Use API data if available, otherwise use defaults
-  const displayCategories = categories.length > 0 ? categories : defaultCategories;
+  // FIXED: Use API data if available and valid, otherwise use defaults
+  const displayCategories = hasApiCategories ? apiCategories : defaultCategories;
+
+  // Debug logging (remove in production)
+  React.useEffect(() => {
+    console.log('API Response:', categoriesResponse);
+    console.log('API Categories:', apiCategories);
+    console.log('Has API Categories:', hasApiCategories);
+    console.log('Display Categories:', displayCategories);
+  }, [categoriesResponse, apiCategories, hasApiCategories, displayCategories]);
 
   // Error state
   if (error) {
@@ -124,12 +137,14 @@ const Categories = () => {
               <p className="text-red-600 text-sm">Error: {error.message}</p>
             </div>
           </div>
+          {/* Show default categories even on error */}
+          <CategoriesGrid categories={defaultCategories} />
         </div>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,71 +176,21 @@ const Categories = () => {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Explore microbiology research organized by specialized fields and disciplines
           </p>
-          {categories.length === 0 && (
+          {/* FIXED: Show proper message based on data source */}
+          {!hasApiCategories && categoriesResponse && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-2xl mx-auto mt-4">
               <p className="text-yellow-700">Using default categories. No categories found in database.</p>
+            </div>
+          )}
+          {hasApiCategories && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl mx-auto mt-4">
+              <p className="text-green-700">Showing categories from database ({apiCategories.length} categories)</p>
             </div>
           )}
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayCategories.map((category) => {
-            // Map category names to icons for API data
-            const getIconComponent = (categoryName) => {
-              const iconMap = {
-                'Bacteriology': Microscope,
-                'Virology': Zap,
-                'Mycology': Leaf,
-                'Parasitology': Bug,
-                'Immunology': Shield,
-                'Microbial Genetics': Dna,
-                'Environmental Microbiology': Leaf,
-                'Industrial Microbiology': Factory,
-                'Medical Microbiology': Stethoscope
-              };
-              return iconMap[categoryName] || Microscope;
-            };
-
-            const IconComponent = category.icon || getIconComponent(category.name);
-            const colorClass = category.color || 'from-primary-500 to-primary-600';
-
-            return (
-              <Link
-                key={category._id}
-                to={`/blog?category=${category._id}`}
-                className="group block"
-              >
-                <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 h-full flex flex-col border border-gray-100">
-                  {/* Icon */}
-                  <div className={`bg-gradient-to-r ${colorClass} w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <IconComponent className="h-7 w-7 text-white" />
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
-                    {category.name}
-                  </h3>
-
-                  {/* Description */}
-                  <p className="text-gray-600 mb-4 flex-1">
-                    {category.description}
-                  </p>
-
-                  {/* Post Count */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <span className="text-sm text-gray-500">
-                      {category.postCount || 0} articles
-                    </span>
-                    <span className="text-primary-600 font-semibold text-sm group-hover:text-primary-700 transition-colors">
-                      Explore →
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <CategoriesGrid categories={displayCategories} />
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
@@ -253,6 +218,83 @@ const Categories = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Separate component for categories grid for better organization
+const CategoriesGrid = ({ categories }) => {
+  const getIconComponent = (categoryName) => {
+    const iconMap = {
+      'Bacteriology': Microscope,
+      'Virology': Zap,
+      'Mycology': Leaf,
+      'Parasitology': Bug,
+      'Immunology': Shield,
+      'Microbial Genetics': Dna,
+      'Environmental Microbiology': Leaf,
+      'Industrial Microbiology': Factory,
+      'Medical Microbiology': Stethoscope
+    };
+    return iconMap[categoryName] || Microscope;
+  };
+
+  const getColorClass = (categoryName) => {
+    const colorMap = {
+      'Bacteriology': 'from-blue-500 to-blue-600',
+      'Virology': 'from-red-500 to-red-600',
+      'Mycology': 'from-green-500 to-green-600',
+      'Parasitology': 'from-purple-500 to-purple-600',
+      'Immunology': 'from-orange-500 to-orange-600',
+      'Microbial Genetics': 'from-indigo-500 to-indigo-600',
+      'Environmental Microbiology': 'from-emerald-500 to-emerald-600',
+      'Industrial Microbiology': 'from-amber-500 to-amber-600',
+      'Medical Microbiology': 'from-rose-500 to-rose-600'
+    };
+    return colorMap[categoryName] || 'from-primary-500 to-primary-600';
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {categories.map((category) => {
+        const IconComponent = category.icon || getIconComponent(category.name);
+        const colorClass = category.color || getColorClass(category.name);
+
+        return (
+          <Link
+            key={category._id}
+            to={`/blog?category=${category.slug || category._id}`}
+            className="group block"
+          >
+            <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 h-full flex flex-col border border-gray-100">
+              {/* Icon */}
+              <div className={`bg-gradient-to-r ${colorClass} w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                <IconComponent className="h-7 w-7 text-white" />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
+                {category.name}
+              </h3>
+
+              {/* Description */}
+              <p className="text-gray-600 mb-4 flex-1">
+                {category.description}
+              </p>
+
+              {/* Post Count */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <span className="text-sm text-gray-500">
+                  {category.postCount || 0} articles
+                </span>
+                <span className="text-primary-600 font-semibold text-sm group-hover:text-primary-700 transition-colors">
+                  Explore →
+                </span>
+              </div>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 };
