@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api/auth';
 import toast from 'react-hot-toast';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 const useAuth = () => {
   const context = useContext(AuthContext);
