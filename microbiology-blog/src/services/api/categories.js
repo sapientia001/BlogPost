@@ -1,40 +1,56 @@
+// services/api/categories.js
+
 import api from './config';
 
-export const categoriesAPI = {
-  // CORRECT ENDPOINT: GET /api/categories
+const categoriesAPI = {
+  // Get all categories
   getCategories: async () => {
     const response = await api.get('/categories');
     return response.data;
   },
 
-  // CORRECT ENDPOINT: GET /api/categories/:categoryId
+  // Get single category
   getCategory: async (categoryId) => {
     const response = await api.get(`/categories/${categoryId}`);
     return response.data;
   },
 
-  // CORRECT ENDPOINT: POST /api/categories (admin only)
+  // Get category by slug
+  getCategoryBySlug: async (slug) => {
+    const response = await api.get(`/categories/slug/${slug}`);
+    return response.data;
+  },
+
+  // Search categories
+  searchCategories: async (query) => {
+    const response = await api.get('/categories/search', { 
+      params: { q: query } 
+    });
+    return response.data;
+  },
+
+  // Create category
   createCategory: async (categoryData) => {
     const response = await api.post('/categories', categoryData);
     return response.data;
   },
 
-  // CORRECT ENDPOINT: PUT /api/categories/:categoryId (admin only)
-  updateCategory: async (categoryId, categoryData) => {
-    const response = await api.put(`/categories/${categoryId}`, categoryData);
+  // Update category
+  updateCategory: async (categoryId, updateData) => {
+    const response = await api.put(`/categories/${categoryId}`, updateData);
     return response.data;
   },
 
-  // CORRECT ENDPOINT: DELETE /api/categories/:categoryId (admin only)
+  // Delete category
   deleteCategory: async (categoryId) => {
     const response = await api.delete(`/categories/${categoryId}`);
     return response.data;
   },
 
-  // CORRECT ENDPOINT: GET /api/categories/:categoryId/posts
+  // FIXED: Get category posts with proper response handling
   getCategoryPosts: async (categoryId, params = {}) => {
     const response = await api.get(`/categories/${categoryId}/posts`, { params });
-    return response.data;
+    return response.data; // This should return the full response with success, message, data
   },
 };
 

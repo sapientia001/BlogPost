@@ -117,14 +117,6 @@ const Categories = () => {
   // FIXED: Use API data if available and valid, otherwise use defaults
   const displayCategories = hasApiCategories ? apiCategories : defaultCategories;
 
-  // Debug logging (remove in production)
-  React.useEffect(() => {
-    console.log('API Response:', categoriesResponse);
-    console.log('API Categories:', apiCategories);
-    console.log('Has API Categories:', hasApiCategories);
-    console.log('Display Categories:', displayCategories);
-  }, [categoriesResponse, apiCategories, hasApiCategories, displayCategories]);
-
   // Error state
   if (error) {
     return (
