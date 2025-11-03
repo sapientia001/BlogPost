@@ -10,8 +10,7 @@ import {
   Factory, 
   Stethoscope,
   Zap,
-  Bug,
-  Activity
+  Bug
 } from 'lucide-react';
 
 const Categories = () => {
@@ -21,25 +20,25 @@ const Categories = () => {
     data: categoriesResponse, 
     isLoading, 
     error,
-    isFetching 
+    refetch 
   } = useGetQuery(
     ['categories'],
-    categoriesAPI.getCategories,
+    () => categoriesAPI.getCategories(),
     {
       retry: 3,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnMount: true, // Ensure fresh data on component mount
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
     }
   );
 
-  // FIXED: Properly extract categories from API response
+  // FIXED: Proper data extraction with better error handling
   const apiCategories = categoriesResponse?.data?.categories || [];
-  
-  // Check if we have valid API data (not just empty array from initial state)
-  const hasApiCategories = categoriesResponse && Array.isArray(apiCategories) && apiCategories.length > 0;
+  const hasApiData = categoriesResponse?.success && Array.isArray(apiCategories);
+  const shouldUseApiData = hasApiData && apiCategories.length > 0;
 
-  // Default categories with proper structure matching API
-  const defaultCategories = [
+  // Default categories
+ const defaultCategories = [
     { 
       _id: 'bacteriology', 
       name: 'Bacteriology', 
@@ -114,10 +113,23 @@ const Categories = () => {
     }
   ];
 
-  // FIXED: Use API data if available and valid, otherwise use defaults
-  const displayCategories = hasApiCategories ? apiCategories : defaultCategories;
+  // FIXED: Clear logic for which data to display
+  const displayCategories = shouldUseApiData ? apiCategories : defaultCategories;
+  const dataSource = shouldUseApiData ? 'api' : 'default';
 
-  // Error state
+  // Debug logging
+  React.useEffect(() => {
+    console.log('=== CATEGORIES DEBUG ===');
+    console.log('Full API Response:', categoriesResponse);
+    console.log('API Categories:', apiCategories);
+    console.log('Has API Data:', hasApiData);
+    console.log('Should Use API Data:', shouldUseApiData);
+    console.log('Display Categories Count:', displayCategories.length);
+    console.log('Data Source:', dataSource);
+    console.log('=== END DEBUG ===');
+  }, [categoriesResponse, apiCategories, hasApiData, shouldUseApiData, dataSource]);
+
+  // Error state with retry option
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -126,17 +138,22 @@ const Categories = () => {
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Research Categories</h1>
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl mx-auto">
               <p className="text-red-700 mb-4">Error loading categories. Showing default categories.</p>
-              <p className="text-red-600 text-sm">Error: {error.message}</p>
+              <p className="text-red-600 text-sm mb-4">Error: {error.message}</p>
+              <button
+                onClick={() => refetch()}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Retry Loading Categories
+              </button>
             </div>
           </div>
-          {/* Show default categories even on error */}
-          <CategoriesGrid categories={defaultCategories} />
+          <CategoriesGrid categories={defaultCategories} dataSource="error" />
         </div>
       </div>
     );
   }
 
-  if (isLoading || isFetching) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -168,21 +185,32 @@ const Categories = () => {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Explore microbiology research organized by specialized fields and disciplines
           </p>
-          {/* FIXED: Show proper message based on data source */}
-          {!hasApiCategories && categoriesResponse && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-2xl mx-auto mt-4">
-              <p className="text-yellow-700">Using default categories. No categories found in database.</p>
-            </div>
-          )}
-          {hasApiCategories && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl mx-auto mt-4">
-              <p className="text-green-700">Showing categories from database ({apiCategories.length} categories)</p>
-            </div>
-          )}
+          
+          {/* Data Source Indicator */}
+          <div className={`mt-4 max-w-2xl mx-auto rounded-lg p-4 ${
+            dataSource === 'api' 
+              ? 'bg-green-50 border border-green-200 text-green-700'
+              : 'bg-yellow-50 border border-yellow-200 text-yellow-700'
+          }`}>
+            <p>
+              {dataSource === 'api' 
+                ? `✅ Showing ${displayCategories.length} categories from database`
+                : '⚠️ Using default categories (no categories found in database)'
+              }
+            </p>
+            {dataSource === 'default' && (
+              <button
+                onClick={() => refetch()}
+                className="mt-2 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 transition-colors"
+              >
+                Retry Loading
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Categories Grid */}
-        <CategoriesGrid categories={displayCategories} />
+        <CategoriesGrid categories={displayCategories} dataSource={dataSource} />
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
@@ -214,8 +242,8 @@ const Categories = () => {
   );
 };
 
-// Separate component for categories grid for better organization
-const CategoriesGrid = ({ categories }) => {
+// Separate Categories Grid Component
+const CategoriesGrid = ({ categories, dataSource }) => {
   const getIconComponent = (categoryName) => {
     const iconMap = {
       'Bacteriology': Microscope,
@@ -226,7 +254,8 @@ const CategoriesGrid = ({ categories }) => {
       'Microbial Genetics': Dna,
       'Environmental Microbiology': Leaf,
       'Industrial Microbiology': Factory,
-      'Medical Microbiology': Stethoscope
+      'Medical Microbiology': Stethoscope,
+      'General Biology': Dna // Add new categories here
     };
     return iconMap[categoryName] || Microscope;
   };
@@ -241,7 +270,8 @@ const CategoriesGrid = ({ categories }) => {
       'Microbial Genetics': 'from-indigo-500 to-indigo-600',
       'Environmental Microbiology': 'from-emerald-500 to-emerald-600',
       'Industrial Microbiology': 'from-amber-500 to-amber-600',
-      'Medical Microbiology': 'from-rose-500 to-rose-600'
+      'Medical Microbiology': 'from-rose-500 to-rose-600',
+      'General Biology': 'from-teal-500 to-teal-600' // Add new categories here
     };
     return colorMap[categoryName] || 'from-primary-500 to-primary-600';
   };
@@ -249,8 +279,8 @@ const CategoriesGrid = ({ categories }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {categories.map((category) => {
-        const IconComponent = category.icon || getIconComponent(category.name);
-        const colorClass = category.color || getColorClass(category.name);
+        const IconComponent = getIconComponent(category.name);
+        const colorClass = getColorClass(category.name);
 
         return (
           <Link
@@ -273,6 +303,13 @@ const CategoriesGrid = ({ categories }) => {
               <p className="text-gray-600 mb-4 flex-1">
                 {category.description}
               </p>
+
+              {/* Debug Info - only show for API data */}
+              {dataSource === 'api' && (
+                <div className="text-xs text-gray-400 mb-2">
+                  ID: {category._id} | Slug: {category.slug}
+                </div>
+              )}
 
               {/* Post Count */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
