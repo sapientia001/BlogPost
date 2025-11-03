@@ -49,21 +49,26 @@ const authController = {
         password,
         role: role || 'reader',
         institution: institution?.trim(),
-        specialization: Array.isArray(specialization) ? specialization : []
+        specialization: Array.isArray(specialization) ? specialization : [],
+        status: 'pending'
       });
 
-      await user.save();
+      // Generate email verification token BEFORE saving
+      const emailVerificationToken = user.generateEmailVerificationToken();
+      await user.save(); // Save after generating token
 
       // Generate tokens
       const token = generateToken({ id: user._id.toString() });
       const refreshToken = generateRefreshToken({ id: user._id.toString() });
 
-      // Send welcome email
+      // Send welcome email AND email verification
       try {
         await emailService.sendWelcomeEmail(user);
         await emailService.sendEmailVerificationEmail(user, emailVerificationToken);
+        logger.info('Registration emails sent successfully', { userId: user._id, email: user.email });
       } catch (emailError) {
-        logger.error('Failed to send welcome email', { userId: user._id, error: emailError.message });
+        logger.error('Failed to send registration emails', { userId: user._id, error: emailError.message });
+        // Don't fail registration if email fails
       }
 
       // Standardized user response
@@ -89,7 +94,7 @@ const authController = {
         refreshToken
       };
 
-      return sendSuccessResponse(res, 'User registered successfully', userResponse, 201);
+      return sendSuccessResponse(res, 'User registered successfully. Please check your email to verify your account.', userResponse, 201);
 
     } catch (error) {
       logger.error('Error registering user', { error: error.message, stack: error.stack });
@@ -97,7 +102,7 @@ const authController = {
     }
   },
 
-    // User login
+  // User login
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -119,6 +124,11 @@ const authController = {
       const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) {
         return sendErrorResponse(res, 'Invalid email or password', null, 401);
+      }
+
+      // Check if email is verified
+      if (!user.emailVerified) {
+        return sendErrorResponse(res, 'Please verify your email before logging in.', null, 401);
       }
 
       // Check user status
@@ -164,8 +174,8 @@ const authController = {
       return sendErrorResponse(res, 'Error during login', error.message, 500);
     }
   },
-  
-     // Add email verification endpoint
+
+  // Verify email
   verifyEmail: async (req, res) => {
     try {
       const { token } = req.body;
@@ -174,11 +184,8 @@ const authController = {
         return sendErrorResponse(res, 'Verification token is required', null, 400);
       }
 
-      // Find user by verification token
-      const user = await User.findOne({
-        emailVerificationToken: token,
-        emailVerificationExpires: { $gt: Date.now() }
-      });
+      // Find user by verification token using the new static method
+      const user = await User.findByVerificationToken(token);
 
       if (!user) {
         return sendErrorResponse(res, 'Invalid or expired verification token', null, 400);
@@ -199,7 +206,7 @@ const authController = {
     }
   },
 
-    // Resend verification email
+  // Resend verification email
   resendVerificationEmail: async (req, res) => {
     try {
       const { email } = req.body;
@@ -221,6 +228,7 @@ const authController = {
       // Send verification email
       try {
         await emailService.sendEmailVerificationEmail(user, emailVerificationToken);
+        logger.info('Verification email resent successfully', { userId: user._id, email: user.email });
       } catch (emailError) {
         logger.error('Failed to send verification email', { userId: user._id, error: emailError.message });
         return sendErrorResponse(res, 'Failed to send verification email', null, 500);
@@ -233,7 +241,6 @@ const authController = {
       return sendErrorResponse(res, 'Error processing request', error.message, 500);
     }
   },
-
 
   // Get current user
   getMe: async (req, res) => {

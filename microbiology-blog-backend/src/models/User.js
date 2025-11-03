@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const mongoosePaginate = require('mongoose-paginate-v2');
+const crypto = require('crypto'); // Add this at the top
 
 const userSchema = new mongoose.Schema({
   firstName: {
@@ -164,20 +165,30 @@ userSchema.methods.updateLastActive = function() {
   return this.save({ validateBeforeSave: false });
 };
 
-// Generate email verification token
+// Generate email verification token - FIXED VERSION
 userSchema.methods.generateEmailVerificationToken = function() {
-  const crypto = require('crypto');
-  this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
+  // Generate token
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  // Set token and expiration on user
+  this.emailVerificationToken = token;
   this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-  return this.emailVerificationToken;
+  
+  // Return the token so it can be used in email
+  return token;
 };
 
 // Generate password reset token
 userSchema.methods.generatePasswordResetToken = function() {
-  const crypto = require('crypto');
-  this.passwordResetToken = crypto.randomBytes(32).toString('hex');
+  // Generate token
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  // Set token and expiration on user
+  this.passwordResetToken = token;
   this.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
-  return this.passwordResetToken;
+  
+  // Return the token so it can be used in email
+  return token;
 };
 
 // Check if user is active
@@ -203,6 +214,22 @@ userSchema.statics.findActiveUsers = function() {
 // Static method to find by email (case insensitive)
 userSchema.statics.findByEmail = function(email) {
   return this.findOne({ email: new RegExp(`^${email}$`, 'i') });
+};
+
+// Static method to find by verification token
+userSchema.statics.findByVerificationToken = function(token) {
+  return this.findOne({
+    emailVerificationToken: token,
+    emailVerificationExpires: { $gt: Date.now() }
+  });
+};
+
+// Static method to find by reset token
+userSchema.statics.findByResetToken = function(token) {
+  return this.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: Date.now() }
+  });
 };
 
 // Apply mongoose-paginate-v2 plugin
