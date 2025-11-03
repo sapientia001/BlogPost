@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// Import Jodit Editor
+import JoditEditor from 'jodit-react';
+
 // Constants
 const VALIDATION_RULES = {
   title: {
@@ -41,6 +44,35 @@ const STATUS_OPTIONS = {
   draft: { value: 'draft', label: 'Save as Draft', icon: BookOpen },
   published: { value: 'published', label: 'Publish Now', icon: Eye },
   archived: { value: 'archived', label: 'Archive Post', icon: Archive }
+};
+
+// Jodit Editor configuration
+const EDITOR_CONFIG = {
+  readonly: false,
+  placeholder: 'Write your research content here...',
+  height: 500,
+  toolbarAdaptive: false,
+  spellcheck: true,
+  language: 'en',
+  toolbarButtonSize: 'medium',
+  buttons: [
+    'bold', 'italic', 'underline', 'strikethrough', '|',
+    'superscript', 'subscript', '|',
+    'ul', 'ol', 'outdent', 'indent', '|',
+    'font', 'fontsize', 'brush', 'paragraph', '|',
+    'align', '|',
+    'link', 'image', 'table', '|',
+    'source', '|',
+    'undo', 'redo', '|',
+    'preview', 'fullsize'
+  ],
+  uploader: {
+    insertImageAsBase64URI: true
+  },
+  style: {
+    fontFamily: 'Arial, sans-serif',
+    fontSize: '14px'
+  }
 };
 
 // Custom Hooks
@@ -396,7 +428,7 @@ const EditPost = () => {
             onRemoveImage={removeImage}
           />
 
-          {/* Content */}
+          {/* Content - Updated with Jodit Editor */}
           <ContentSection
             content={content}
             onContentChange={setContent}
@@ -640,19 +672,18 @@ const FeaturedImageSection = ({ imagePreview, imageFile, onImageUpload, onRemove
   </div>
 );
 
+// Updated ContentSection with Jodit Editor
 const ContentSection = ({ content, onContentChange }) => (
   <div className="bg-white rounded-lg shadow-sm p-6">
     <h2 className="text-xl font-bold text-gray-900 mb-4">Content *</h2>
-    <textarea
+    <JoditEditor
       value={content}
-      onChange={(e) => onContentChange(e.target.value)}
-      rows="15"
-      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none"
-      placeholder="Write your research content here..."
-      required
+      config={EDITOR_CONFIG}
+      onBlur={(newContent) => onContentChange(newContent)}
+      onChange={(newContent) => {}}
     />
     {!content && (
-      <p className="mt-1 text-sm text-red-600">Content is required</p>
+      <p className="mt-3 text-sm text-red-600">Content is required</p>
     )}
   </div>
 );

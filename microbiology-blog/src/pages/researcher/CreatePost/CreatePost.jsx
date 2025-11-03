@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -12,6 +12,9 @@ import {
   Loader
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Import Jodit Editor
+import JoditEditor from 'jodit-react';
 
 const CreatePost = () => {
   const { user } = useAuth();
@@ -40,6 +43,35 @@ const CreatePost = () => {
       status: 'draft'
     }
   });
+
+  // Jodit Editor configuration
+  const editorConfig = {
+    readonly: false,
+    placeholder: 'Write your research content here...',
+    height: 500,
+    toolbarAdaptive: false,
+    spellcheck: true,
+    language: 'en',
+    toolbarButtonSize: 'medium',
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'superscript', 'subscript', '|',
+      'ul', 'ol', 'outdent', 'indent', '|',
+      'font', 'fontsize', 'brush', 'paragraph', '|',
+      'align', '|',
+      'link', 'image', 'table', '|',
+      'source', '|',
+      'undo', 'redo', '|',
+      'preview', 'fullsize'
+    ],
+    uploader: {
+      insertImageAsBase64URI: true
+    },
+    style: {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px'
+    }
+  };
 
   // Fetch categories from backend
   useEffect(() => {
@@ -325,19 +357,17 @@ const CreatePost = () => {
             )}
           </div>
 
-          {/* Content */}
+          {/* Content - Replaced with Jodit Editor */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Content *</h2>
-            <textarea
+            <JoditEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows="15"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors resize-none"
-              placeholder="Write your research content here..."
-              required
+              config={editorConfig}
+              onBlur={(newContent) => setContent(newContent)}
+              onChange={(newContent) => {}}
             />
             {!content && (
-              <p className="mt-1 text-sm text-red-600">Content is required</p>
+              <p className="mt-3 text-sm text-red-600">Content is required</p>
             )}
           </div>
 
