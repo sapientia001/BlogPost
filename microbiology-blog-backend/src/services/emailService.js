@@ -70,12 +70,6 @@ class EmailService {
         webInterface: 'https://ethereal.email'
       });
       
-      console.log('\n✨ ====================================');
-      console.log('📧 DEVELOPMENT EMAIL CREDENTIALS:');
-      console.log('Email:', this.testAccount.user);
-      console.log('Password:', this.testAccount.pass);
-      console.log('Web Interface: https://ethereal.email');
-      console.log('==================================== ✨\n');
     }
   }
 

@@ -61,6 +61,7 @@ const authController = {
       // Send welcome email
       try {
         await emailService.sendWelcomeEmail(user);
+        await emailService.sendEmailVerificationEmail(user, emailVerificationToken);
       } catch (emailError) {
         logger.error('Failed to send welcome email', { userId: user._id, error: emailError.message });
       }
@@ -96,7 +97,7 @@ const authController = {
     }
   },
 
-  // User login
+    // User login
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -163,6 +164,76 @@ const authController = {
       return sendErrorResponse(res, 'Error during login', error.message, 500);
     }
   },
+  
+     // Add email verification endpoint
+  verifyEmail: async (req, res) => {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return sendErrorResponse(res, 'Verification token is required', null, 400);
+      }
+
+      // Find user by verification token
+      const user = await User.findOne({
+        emailVerificationToken: token,
+        emailVerificationExpires: { $gt: Date.now() }
+      });
+
+      if (!user) {
+        return sendErrorResponse(res, 'Invalid or expired verification token', null, 400);
+      }
+
+      // Update user status
+      user.emailVerified = true;
+      user.status = 'active';
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      await user.save();
+
+      return sendSuccessResponse(res, 'Email verified successfully. You can now login.');
+
+    } catch (error) {
+      logger.error('Error verifying email', { error: error.message, stack: error.stack });
+      return sendErrorResponse(res, 'Error verifying email', error.message, 500);
+    }
+  },
+
+    // Resend verification email
+  resendVerificationEmail: async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) {
+        // Don't reveal whether email exists
+        return sendSuccessResponse(res, 'If the email exists, a verification link has been sent.');
+      }
+
+      if (user.emailVerified) {
+        return sendErrorResponse(res, 'Email is already verified', null, 400);
+      }
+
+      // Generate new verification token
+      const emailVerificationToken = user.generateEmailVerificationToken();
+      await user.save();
+
+      // Send verification email
+      try {
+        await emailService.sendEmailVerificationEmail(user, emailVerificationToken);
+      } catch (emailError) {
+        logger.error('Failed to send verification email', { userId: user._id, error: emailError.message });
+        return sendErrorResponse(res, 'Failed to send verification email', null, 500);
+      }
+
+      return sendSuccessResponse(res, 'Verification email sent successfully. Please check your inbox.');
+
+    } catch (error) {
+      logger.error('Error resending verification email', { error: error.message, stack: error.stack });
+      return sendErrorResponse(res, 'Error processing request', error.message, 500);
+    }
+  },
+
 
   // Get current user
   getMe: async (req, res) => {

@@ -45,6 +45,8 @@ const RegisterForm = () => {
       };
       
       await registerUser(backendData);
+
+      reset();
     } catch (error) {
       // Error is handled in the auth context
     }
@@ -330,11 +332,11 @@ const RegisterForm = () => {
           />
           <label htmlFor="agreeTerms" className="ml-2 block text-sm text-gray-700">
             I agree to the{' '}
-            <Link to="/terms" className="text-primary-600 hover:text-primary-500">
+            <Link to="#" className="text-primary-600 hover:text-primary-500">
               Terms and Conditions
             </Link>{' '}
             and{' '}
-            <Link to="/privacy" className="text-primary-600 hover:text-primary-500">
+            <Link to="#" className="text-primary-600 hover:text-primary-500">
               Privacy Policy
             </Link>
           </label>

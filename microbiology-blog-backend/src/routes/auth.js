@@ -6,7 +6,9 @@ const {
   getMe,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  verifyEmail,
+  resendVerificationEmail
 } = require('../controllers/authController');
 const {
   validateRegistration,
@@ -27,6 +29,8 @@ router.post('/login', validateLogin, login);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/refresh-token', refreshToken);
+router.post('/verify-email', verifyEmail);
+router.post('/resend-verification', resendVerificationEmail);
 
 // Protected routes
 router.get('/me', auth, getMe);

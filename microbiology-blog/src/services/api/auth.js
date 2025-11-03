@@ -42,6 +42,13 @@ export const authAPI = {
     const response = await api.post('/auth/verify-email', { token });
     return response.data;
   },
+
+    // Add resend verification email endpoint
+  resendVerificationEmail: async (email) => {
+    const response = await api.post('/auth/resend-verification', { email });
+    return response.data;
+  },
+  
 };
 
 export default authAPI;

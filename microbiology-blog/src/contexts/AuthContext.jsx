@@ -132,7 +132,7 @@ const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await authAPI.register(userData);
-      toast.success('Registration successful! Please login.');
+      toast.success('Registration successful! Please check your email to verify your account.');
       return response;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Registration failed');
