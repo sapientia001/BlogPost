@@ -194,8 +194,8 @@ const Categories = () => {
           }`}>
             <p>
               {dataSource === 'api' 
-                ? `✅ Showing ${displayCategories.length} categories from database`
-                : '⚠️ Using default categories (no categories found in database)'
+                ? `✅ Showing ${displayCategories.length} categories`
+                : '⚠️ Using default categories'
               }
             </p>
             {dataSource === 'default' && (

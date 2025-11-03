@@ -2,7 +2,7 @@ const Category = require('../models/Category');
 const Post = require('../models/Post');
 const logger = require('../utils/logger');
 
-// Standardized response helper (unchanged)
+// Standardized response helper
 const sendSuccessResponse = (res, message, data = null, statusCode = 200) => {
   const response = {
     success: true,
@@ -152,7 +152,7 @@ const categoryController = {
     }
   },
 
-  // Create category (admin only) - UPDATED to work with your schema
+  // Create category (admin only)
   createCategory: async (req, res) => {
     try {
       const { name, description, image } = req.body;
@@ -166,21 +166,19 @@ const categoryController = {
         return sendErrorResponse(res, 'Category description is required', null, 400);
       }
 
-      // Check name length (matches your schema validation)
-      if (name.length > 50) {
-        return sendErrorResponse(res, 'Category name cannot exceed 50 characters', null, 400);
+      // Check if category already exists (case-insensitive)
+      const existingCategory = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      });
+      
+      if (existingCategory) {
+        return sendErrorResponse(res, 'Category with this name already exists', null, 409);
       }
 
-      // Check description length (matches your schema validation)
-      if (description.length > 200) {
-        return sendErrorResponse(res, 'Description cannot exceed 200 characters', null, 400);
-      }
-
-      // Create category - let Mongoose handle slug generation via pre-save hook
       const category = new Category({
         name: name.trim(),
         description: description.trim(),
-        image: image || undefined // Only include if provided
+        image: image || undefined
       });
 
       await category.save();
@@ -190,10 +188,8 @@ const categoryController = {
     } catch (error) {
       logger.error('Error creating category', { error: error.message, stack: error.stack });
       
-      // Handle duplicate key errors (name or slug uniqueness)
       if (error.code === 11000) {
-        const field = error.keyPattern.name ? 'name' : 'slug';
-        return sendErrorResponse(res, `Category with this ${field} already exists`, null, 409);
+        return sendErrorResponse(res, 'Category with this name or slug already exists', null, 409);
       }
       
       // Handle Mongoose validation errors
@@ -206,65 +202,47 @@ const categoryController = {
     }
   },
 
-  // Update category (admin only) - UPDATED to work with your schema
+  // Update category (admin only) - FIXED
   updateCategory: async (req, res) => {
     try {
       const { categoryId } = req.params;
       const { name, description, image, isActive } = req.body;
 
-      const category = await Category.findById(categoryId);
-      if (!category) {
+      // Find the category first to ensure it exists
+      const existingCategory = await Category.findById(categoryId);
+      if (!existingCategory) {
         return sendErrorResponse(res, 'Category not found', null, 404);
+      }
+
+      // If name is being updated, check for duplicates (excluding current category)
+      if (name && name.trim()) {
+        const duplicateCategory = await Category.findOne({
+          name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+          _id: { $ne: categoryId }
+        });
+        
+        if (duplicateCategory) {
+          return sendErrorResponse(res, 'Category with this name already exists', null, 409);
+        }
       }
 
       // Prepare update data
       const updateData = {};
       
-      if (name !== undefined) {
-        if (!name.trim()) {
-          return sendErrorResponse(res, 'Category name cannot be empty', null, 400);
-        }
-        if (name.length > 50) {
-          return sendErrorResponse(res, 'Category name cannot exceed 50 characters', null, 400);
-        }
-        updateData.name = name.trim();
-      }
+      if (name !== undefined) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description.trim();
+      if (image !== undefined) updateData.image = image;
+      if (isActive !== undefined) updateData.isActive = isActive;
 
-      if (description !== undefined) {
-        if (!description.trim()) {
-          return sendErrorResponse(res, 'Category description cannot be empty', null, 400);
-        }
-        if (description.length > 200) {
-          return sendErrorResponse(res, 'Description cannot exceed 200 characters', null, 400);
-        }
-        updateData.description = description.trim();
-      }
-
-      if (image !== undefined) {
-        updateData.image = image;
-      }
-
-      if (isActive !== undefined) {
-        updateData.isActive = isActive;
-      }
-
-      // If name is being updated, check for duplicates (excluding current category)
-      if (updateData.name) {
-        const existingCategory = await Category.findOne({
-          name: { $regex: new RegExp(`^${updateData.name}$`, 'i') },
-          _id: { $ne: categoryId }
-        });
-        
-        if (existingCategory) {
-          return sendErrorResponse(res, 'Category with this name already exists', null, 409);
-        }
-      }
-
-      // Update category - let Mongoose handle slug regeneration if name changed
+      // Update category - this will trigger the pre-save hook for slug generation
       const updatedCategory = await Category.findByIdAndUpdate(
         categoryId,
         updateData,
-        { new: true, runValidators: true }
+        { 
+          new: true, 
+          runValidators: true,
+          context: 'query'
+        }
       );
 
       return sendSuccessResponse(res, 'Category updated successfully', { category: updatedCategory });
@@ -285,7 +263,7 @@ const categoryController = {
     }
   },
 
-  // Delete category (admin only) - Soft delete (unchanged)
+  // Delete category (admin only) - FIXED: Proper soft delete
   deleteCategory: async (req, res) => {
     try {
       const { categoryId } = req.params;
@@ -301,10 +279,14 @@ const categoryController = {
         return sendErrorResponse(res, 'Cannot delete category with existing posts. Move or delete posts first.', null, 400);
       }
 
-      // Soft delete instead of hard delete
-      await Category.findByIdAndUpdate(categoryId, { isActive: false });
+      // Soft delete - set isActive to false
+      const deletedCategory = await Category.findByIdAndUpdate(
+        categoryId,
+        { isActive: false },
+        { new: true }
+      );
 
-      return sendSuccessResponse(res, 'Category deleted successfully');
+      return sendSuccessResponse(res, 'Category deleted successfully', { category: deletedCategory });
 
     } catch (error) {
       logger.error('Error deleting category', { categoryId, error: error.message, stack: error.stack });
@@ -312,7 +294,7 @@ const categoryController = {
     }
   },
 
-  // Get posts by category with pagination - FIXED to maintain frontend structure
+  // Get posts by category with pagination - FIXED
   getCategoryPosts: async (req, res) => {
     try {
       const { categoryId } = req.params;
@@ -320,12 +302,13 @@ const categoryController = {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
 
-      const category = await Category.findById(categoryId);
+      // Check if category exists and is active
+      const category = await Category.findOne({ _id: categoryId, isActive: true });
       if (!category) {
         return sendErrorResponse(res, 'Category not found', null, 404);
       }
 
-      // Use standard Mongoose queries (maintains frontend structure)
+      // Get posts with pagination
       const posts = await Post.find({ category: categoryId, status: 'published' })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -337,7 +320,11 @@ const categoryController = {
       const totalPosts = await Post.countDocuments({ category: categoryId, status: 'published' });
       const totalPages = Math.ceil(totalPosts / limit);
 
-      // Maintain exact frontend response structure
+      // Update category postCount in background (non-blocking)
+      Category.findByIdAndUpdate(categoryId, { postCount: totalPosts }).catch(err => {
+        logger.error('Error updating category post count', { categoryId, error: err.message });
+      });
+
       const responseData = {
         category,
         posts: {
@@ -358,6 +345,66 @@ const categoryController = {
     } catch (error) {
       logger.error('Error fetching category posts', { categoryId, error: error.message, stack: error.stack });
       return sendErrorResponse(res, 'Error fetching category posts', error.message, 500);
+    }
+  },
+
+  // Get all categories for admin (including inactive) - NEW
+  getAdminCategories: async (req, res) => {
+    try {
+      const categories = await Category.find({})
+        .sort({ name: 1 })
+        .lean();
+
+      // Get post counts for each category
+      const categoriesWithCounts = await Promise.all(
+        categories.map(async (category) => {
+          const postCount = await Post.countDocuments({ 
+            category: category._id, 
+            status: 'published' 
+          });
+          return {
+            ...category,
+            postCount
+          };
+        })
+      );
+
+      return sendSuccessResponse(res, 'Categories retrieved successfully', { categories: categoriesWithCounts });
+
+    } catch (error) {
+      logger.error('Error fetching admin categories', { error: error.message, stack: error.stack });
+      return sendErrorResponse(res, 'Error fetching categories', error.message, 500);
+    }
+  },
+
+  // Force delete category (admin only) - NEW
+  forceDeleteCategory: async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return sendErrorResponse(res, 'Category not found', null, 404);
+      }
+
+      // Check if category has posts
+      const postCount = await Post.countDocuments({ category: categoryId });
+      if (postCount > 0) {
+        // Update all posts to have no category
+        await Post.updateMany(
+          { category: categoryId },
+          { $unset: { category: "" } }
+        );
+      }
+
+      // Hard delete
+      await Category.findByIdAndDelete(categoryId);
+
+      return sendSuccessResponse(res, 'Category permanently deleted successfully');
+
+    } catch (error) {
+      logger.error('Error force deleting category', { categoryId, error: error.message, stack: error.stack });
+      return sendErrorResponse(res, 'Error deleting category', error.message, 500);
     }
   }
 };
