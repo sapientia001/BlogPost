@@ -8,7 +8,7 @@ import Blog from './pages/public/Blog/Blog'
 import PostDetail from './pages/public/PostDetail/PostDetail'
 import Categories from './pages/public/Categories/Categories'
 import About from './pages/public/About/About'
-
+import ScrollToTop from './components/common/ScrollToTop/ScrollToTop'
 // Auth pages
 import Login from './pages/auth/Login/Login'
 import Register from './pages/auth/Register/Register'
@@ -38,6 +38,7 @@ import Footer from './components/common/Footer/Footer'
 function App() {
   return (
     <AuthProvider>
+      <ScrollToTop />
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
         <main className="flex-1">
