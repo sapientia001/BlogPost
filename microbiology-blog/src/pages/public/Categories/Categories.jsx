@@ -32,13 +32,13 @@ const Categories = () => {
     }
   );
 
-  // FIXED: Proper data extraction with better error handling
+  // Get categories from API response
   const apiCategories = categoriesResponse?.data?.categories || [];
   const hasApiData = categoriesResponse?.success && Array.isArray(apiCategories);
   const shouldUseApiData = hasApiData && apiCategories.length > 0;
 
   // Default categories
- const defaultCategories = [
+  const defaultCategories = [
     { 
       _id: 'bacteriology', 
       name: 'Bacteriology', 
@@ -113,21 +113,9 @@ const Categories = () => {
     }
   ];
 
-  // FIXED: Clear logic for which data to display
+  // Use API data if available, otherwise use defaults
   const displayCategories = shouldUseApiData ? apiCategories : defaultCategories;
   const dataSource = shouldUseApiData ? 'api' : 'default';
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('=== CATEGORIES DEBUG ===');
-    console.log('Full API Response:', categoriesResponse);
-    console.log('API Categories:', apiCategories);
-    console.log('Has API Data:', hasApiData);
-    console.log('Should Use API Data:', shouldUseApiData);
-    console.log('Display Categories Count:', displayCategories.length);
-    console.log('Data Source:', dataSource);
-    console.log('=== END DEBUG ===');
-  }, [categoriesResponse, apiCategories, hasApiData, shouldUseApiData, dataSource]);
 
   // Error state with retry option
   if (error) {
@@ -138,7 +126,6 @@ const Categories = () => {
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Research Categories</h1>
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl mx-auto">
               <p className="text-red-700 mb-4">Error loading categories. Showing default categories.</p>
-              <p className="text-red-600 text-sm mb-4">Error: {error.message}</p>
               <button
                 onClick={() => refetch()}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -147,7 +134,7 @@ const Categories = () => {
               </button>
             </div>
           </div>
-          <CategoriesGrid categories={defaultCategories} dataSource="error" />
+          <CategoriesGrid categories={defaultCategories} />
         </div>
       </div>
     );
@@ -187,30 +174,21 @@ const Categories = () => {
           </p>
           
           {/* Data Source Indicator */}
-          <div className={`mt-4 max-w-2xl mx-auto rounded-lg p-4 ${
-            dataSource === 'api' 
-              ? 'bg-green-50 border border-green-200 text-green-700'
-              : 'bg-yellow-50 border border-yellow-200 text-yellow-700'
-          }`}>
-            <p>
-              {dataSource === 'api' 
-                ? `✅ Showing ${displayCategories.length} categories`
-                : '⚠️ Using default categories'
-              }
-            </p>
-            {dataSource === 'default' && (
+          {dataSource === 'default' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-2xl mx-auto mt-4">
+              <p className="text-yellow-700">Using default categories</p>
               <button
                 onClick={() => refetch()}
                 className="mt-2 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 transition-colors"
               >
                 Retry Loading
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Categories Grid */}
-        <CategoriesGrid categories={displayCategories} dataSource={dataSource} />
+        <CategoriesGrid categories={displayCategories} />
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
@@ -243,7 +221,7 @@ const Categories = () => {
 };
 
 // Separate Categories Grid Component
-const CategoriesGrid = ({ categories, dataSource }) => {
+const CategoriesGrid = ({ categories }) => {
   const getIconComponent = (categoryName) => {
     const iconMap = {
       'Bacteriology': Microscope,
@@ -255,7 +233,7 @@ const CategoriesGrid = ({ categories, dataSource }) => {
       'Environmental Microbiology': Leaf,
       'Industrial Microbiology': Factory,
       'Medical Microbiology': Stethoscope,
-      'General Biology': Dna // Add new categories here
+      'General Biology': Dna
     };
     return iconMap[categoryName] || Microscope;
   };
@@ -271,7 +249,7 @@ const CategoriesGrid = ({ categories, dataSource }) => {
       'Environmental Microbiology': 'from-emerald-500 to-emerald-600',
       'Industrial Microbiology': 'from-amber-500 to-amber-600',
       'Medical Microbiology': 'from-rose-500 to-rose-600',
-      'General Biology': 'from-teal-500 to-teal-600' // Add new categories here
+      'General Biology': 'from-teal-500 to-teal-600'
     };
     return colorMap[categoryName] || 'from-primary-500 to-primary-600';
   };
@@ -303,13 +281,6 @@ const CategoriesGrid = ({ categories, dataSource }) => {
               <p className="text-gray-600 mb-4 flex-1">
                 {category.description}
               </p>
-
-              {/* Debug Info - only show for API data */}
-              {dataSource === 'api' && (
-                <div className="text-xs text-gray-400 mb-2">
-                  ID: {category._id} | Slug: {category.slug}
-                </div>
-              )}
 
               {/* Post Count */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
