@@ -160,6 +160,58 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      setLoading(true);
+      await authAPI.forgotPassword(email);
+      // Success message is handled by the component
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send reset email');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      setLoading(true);
+      await authAPI.resetPassword(token, newPassword);
+      toast.success('Password reset successfully! You can now login with your new password.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to reset password');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyEmail = async (token) => {
+    try {
+      setLoading(true);
+      await authAPI.verifyEmail(token);
+      toast.success('Email verified successfully! You can now login.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to verify email');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendVerificationEmail = async (email) => {
+    try {
+      setLoading(true);
+      await authAPI.resendVerificationEmail(email);
+      toast.success('Verification email sent successfully! Please check your inbox.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send verification email');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateUser = (userData) => {
     const updatedUser = { ...user, ...userData };
     
@@ -195,6 +247,10 @@ const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    resendVerificationEmail,
     updateUser,
     checkAuth,
     refreshUserData,

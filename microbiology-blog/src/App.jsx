@@ -13,6 +13,8 @@ import About from './pages/public/About/About'
 import Login from './pages/auth/Login/Login'
 import Register from './pages/auth/Register/Register'
 import Profile from './pages/auth/Profile/Profile'
+import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword' // NEW IMPORT
+import ResetPassword from './pages/auth/ResetPassword/ResetPassword' // NEW IMPORT
 
 // Researcher pages
 import ResearcherDashboard from './pages/researcher/Dashboard/ResearcherDashboard'
@@ -27,7 +29,7 @@ import AdminUsers from './pages/admin/Users/Users'
 import AdminPosts from './pages/admin/Posts/Posts'
 import AdminCategories from './pages/admin/Categories/Categories'
 import AdminAnalytics from './pages/admin/Analytics/Analytics'
-import AdminEditPost from './pages/admin/EditPost/EditPost' // NEW IMPORT
+import AdminEditPost from './pages/admin/EditPost/EditPost'
 
 // Common components
 import Header from './components/common/Header/Header'
@@ -51,6 +53,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} /> {/* NEW ROUTE */}
+            <Route path="/reset-password" element={<ResetPassword />} /> {/* NEW ROUTE */}
             
             {/* Researcher routes */}
             <Route path="/researcher/dashboard" element={<ResearcherDashboard />} />
@@ -63,7 +67,7 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/posts" element={<AdminPosts />} />
-            <Route path="/admin/posts/edit/:postId" element={<AdminEditPost />} /> {/* NEW ROUTE */}
+            <Route path="/admin/posts/edit/:postId" element={<AdminEditPost />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
           </Routes>
