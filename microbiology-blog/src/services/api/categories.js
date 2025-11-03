@@ -2,7 +2,7 @@
 
 import api from './config';
 
-const categoriesAPI = {
+export const categoriesAPI = {
   // Get all categories
   getCategories: async () => {
     const response = await api.get('/categories');
