@@ -26,6 +26,9 @@ const {
   apiLimiter
 } = require('./middleware');
 
+// Or for Render.com specifically:
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
+
 // Import logger
 const logger = require('./utils/logger');
 
