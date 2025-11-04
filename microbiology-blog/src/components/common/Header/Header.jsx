@@ -220,13 +220,13 @@ const Header = () => {
             {/* Animated Menu Button */}
             <motion.button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="relative p-2 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100 transition-colors"
+              className="relative p-2 rounded-md text-primary-700 hover:text-primary-800 hover:bg-primary-50 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               {/* Pulsing background circle */}
               <motion.div
-                className="absolute inset-0 rounded-md border-2 border-primary-500"
+                className="absolute inset-0 rounded-md border-2 border-primary-700"
                 initial={{ scale: 1, opacity: 0 }}
                 animate={{ 
                   scale: [1, 1.2, 1],
@@ -244,7 +244,7 @@ const Header = () => {
               <motion.div
                 className="absolute inset-0 rounded-md border-2 border-transparent"
                 style={{
-                  background: 'conic-gradient(from 0deg, transparent, #3b82f6, transparent)'
+                  background: 'conic-gradient(from 0deg, transparent, #475569, transparent)'
                 }}
                 animate={{ rotate: 360 }}
                 transition={{
