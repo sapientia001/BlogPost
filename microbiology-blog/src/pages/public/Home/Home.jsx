@@ -133,8 +133,8 @@ const Home = () => {
       {/* Latest Posts Section */}
       <section className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-12 gap-4">
+            <div className="text-center sm:text-left w-full sm:w-auto">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Latest Articles</h2>
               <p className="text-lg text-gray-600">
                 Stay updated with recent publications from our community
@@ -142,7 +142,7 @@ const Home = () => {
             </div>
             <Link
               to="/blog"
-              className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              className="bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors whitespace-nowrap text-sm sm:text-base w-full sm:w-auto text-center"
             >
               View All Articles
             </Link>

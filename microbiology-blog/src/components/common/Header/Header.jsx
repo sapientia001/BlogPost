@@ -217,16 +217,50 @@ const Header = () => {
               <Search className="h-5 w-5" />
             </button>
             
-            <button
+            {/* Animated Menu Button */}
+            <motion.button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100 transition-colors"
+              className="relative p-2 rounded-md text-gray-700 hover:text-primary-600 hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
+              {/* Pulsing background circle */}
+              <motion.div
+                className="absolute inset-0 rounded-md border-2 border-primary-500"
+                initial={{ scale: 1, opacity: 0 }}
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0, 0.3, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  ease: "easeInOut"
+                }}
+              />
+              
+              {/* Rotating border animation */}
+              <motion.div
+                className="absolute inset-0 rounded-md border-2 border-transparent"
+                style={{
+                  background: 'conic-gradient(from 0deg, transparent, #3b82f6, transparent)'
+                }}
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+              />
+              
+              {/* Menu Icon */}
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6 relative z-10" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-6 w-6 relative z-10" />
               )}
-            </button>
+            </motion.button>
           </div>
         </div>
 
